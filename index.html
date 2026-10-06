@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>miniread</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%234a6fb5'/%3E%3Cpath d='M4.5 3.5h7v9h-7z' fill='none' stroke='white' stroke-width='1.4'/%3E%3Cpath d='M6 6h4M6 8h4M6 10h2.5' stroke='white' stroke-width='1.1'/%3E%3C/svg%3E">
+<script>try{localStorage.mrdTheme==='dark'&&(document.documentElement.dataset.theme='dark')}catch(_){}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--fg:#222;--bar:#f3f3f3;--line:#ccc;--btn:#fff;--btnb:#bbb;--btnh:#eef3ff;--bfg:buttontext;--view:#cfcfcf;--side:#f7f7f7;--h4:#555;--h4b:#ddd;--pageb:#777;--err:#c4392f;--on:#d6e4ff;--onb:#6d94e0;--onfg:buttontext}
+[data-theme=dark]{color-scheme:dark;--fg:#e5e5e5;--bar:#000;--line:#262626;--btn:#262626;--btnb:#000;--btnh:#404040;--bfg:#e5e5e5;--view:#141414;--side:#000;--h4:#a3a3a3;--h4b:#262626;--pageb:#404040;--err:#f1877f;--on:#e5e5e5;--onb:#e5e5e5;--onfg:#171717}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{display:flex;flex-direction:column;font:12px/1.5 system-ui,sans-serif;color:var(--fg)}
+button{font:inherit;padding:2px 6px;border:1px solid var(--btnb);border-radius:3px;background:var(--btn);color:var(--bfg);cursor:pointer}
+button:hover{background:var(--btnh)}button:disabled{opacity:.4;cursor:default}button.on{background:var(--on);border-color:var(--onb);color:var(--onfg)}
+input,select,textarea{font:inherit}
+[data-theme=dark] input:not([type=checkbox]):not([type=file]),[data-theme=dark] select,[data-theme=dark] textarea{background:#262626;color:#f5f5f5;border:1px solid #404040;border-radius:3px}
+[data-theme=dark] input:focus,[data-theme=dark] select:focus,[data-theme=dark] textarea:focus{outline:none;border-color:#a3a3a3}
+[data-theme=dark] dialog{background:#171717;color:#e5e5e5;border:1px solid #404040}
+kbd{font:11px ui-monospace,monospace;padding:0 4px;border:1px solid var(--line);border-radius:3px;background:var(--btn)}
+#mBar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 6px;background:var(--bar);border-bottom:1px solid var(--line)}
+#mBar i{width:1px;height:18px;background:var(--line);margin:0 4px}
+#mBar button{padding:1px 5px;border-color:transparent;background:transparent}
+#mBar button:hover{background:transparent;color:var(--onb)}
+#mBar button.on{background:transparent;border-color:transparent;color:var(--onb)}
+#mPgN{width:46px;text-align:center}
+#mPgT{color:var(--h4)}
+#mMain{flex:1;display:flex;min-height:0}
+#mLeft{flex:0 0 60%;min-width:200px;display:flex}
+#mViewWrap{flex:1;position:relative;display:flex;min-width:0}
+#mView{flex:1;overflow:auto;background:var(--view);padding:16px}
+#mHint{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--h4);pointer-events:none;padding:24px}
+#mHint[hidden]{display:none}
+#mHint>div{border:2px dashed var(--h4b);border-radius:8px;padding:26px 34px;max-width:420px;line-height:1.6}
+#mHint small{opacity:.8}
+#mSplit{flex:0 0 5px;cursor:col-resize;background:var(--bar);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+#mThumb{display:none;width:112px;flex:none;overflow:auto;background:var(--bar);border-right:1px solid var(--line);padding:6px 6px 12px}
+body.thumbs #mThumb{display:block}
+.tp{width:96px;margin:0 auto 8px;cursor:pointer}
+.tp .ph{background:var(--btn);outline:1px solid var(--pageb)}
+.tp canvas{display:block;width:100%;height:auto;outline:1px solid var(--pageb)}
+.tp b{display:block;text-align:center;font-weight:normal;font-size:10px;color:var(--h4);margin-top:2px}
+.tp.cur{outline:2px solid var(--onb);outline-offset:2px}
+.tp:hover .ph,.tp:hover canvas{outline-color:var(--onb)}
+.page{position:relative;margin:0 auto 12px;background:#fff;outline:1px solid var(--pageb);box-shadow:0 1px 4px #0006}
+.page canvas{display:block;width:100%;height:100%}
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;z-index:2}
+.textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0}
+.textLayer ::selection{background:#2f6fde55}
+.textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
+.textLayer.selecting .endOfContent{top:0}
+#mRight{flex:1;min-width:300px;display:flex;flex-direction:column;background:var(--side)}
+#mRight details{padding:4px 8px;border-bottom:1px solid var(--line)}
+#mRight summary{cursor:pointer;color:var(--h4)}
+#mRight details label{display:grid;grid-template-columns:56px 1fr;gap:6px;align-items:center;margin:3px 0}
+#mRight [hidden],#mRight details label.up[hidden]{display:none}
+#mRight details label.up{display:block}
+#mRight details input,#mRight details select,#mRight details textarea{width:100%;min-width:0}
+#mRight .up small{display:block;margin:1px 0 2px;color:var(--h4)}
+#mSrc{margin:6px 8px;width:calc(100% - 16px);height:84px;resize:vertical}
+#mOps{display:flex;gap:4px;align-items:center;padding:0 8px 6px}
+#mOps label{display:flex;align-items:center;gap:4px;color:var(--h4)}
+#mGo{flex:1;padding:3px 6px}
+#mCnt{margin-left:auto;color:var(--h4);white-space:nowrap}
+#mBody{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 8px}
+#mHist{flex:1;overflow:auto}
+.item{border-top:1px solid var(--line);padding:6px 0 8px}
+.item .hd{display:flex;align-items:center;gap:6px}
+.mt{font-size:11px;color:var(--h4);border:1px solid var(--h4b);border-radius:3px;padding:0 4px;white-space:nowrap}
+.tm{color:var(--h4);font-size:11px;white-space:nowrap}
+.st{flex:1;min-width:0;color:var(--h4);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd button{padding:0 5px;font-size:11px}
+.item .o summary,.item .th summary{color:var(--h4);cursor:pointer;font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .o .ob,.item .th .tb{font-size:11px;color:var(--h4);white-space:pre-wrap;overflow-wrap:anywhere;border-left:2px solid var(--h4b);padding-left:6px;margin:3px 0 2px}
+.item .o .ob{max-height:120px;overflow:auto}
+.item .th .tb{max-height:220px;overflow:auto}
+.item .t{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7;margin-top:4px}
+.item .t.err{color:var(--err)}
+.item .t.dim{color:var(--h4);font-size:12px}
+#mSt{height:22px;display:flex;align-items:center;gap:18px;padding:2px 2px 2px 8px;background:var(--bar);border-top:1px solid var(--line);white-space:nowrap;overflow:hidden}
+#mMsg{min-width:0;overflow:hidden;text-overflow:ellipsis}
+#mSel{margin-left:auto;color:var(--h4)}
+#mSt button{flex:none;padding:0 8px;line-height:16px;border-color:transparent;background:transparent}
+#mSt button:hover{background:var(--btnh)}
+#mHelp{padding:0;max-width:min(400px,96vw);max-height:92vh;border:1px solid var(--line)}
+#mHelp form{padding:12px 16px;font-size:12.5px;line-height:1.45}
+#mHelp h3{margin:0 0 6px}
+#mHelp dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;margin:0}
+#mHelp dd{margin:0}
+#mHelp .ft{display:flex;align-items:center;margin:8px 0 0}
+#mHelp .ft button{margin-left:auto}
+</style>
+</head>
+<body>
+<div id="mBar">
+<button data-a="thumbs" title="Show or hide page thumbnails">Pages</button>
+<button data-a="open" title="Open a PDF (or drop one on the viewer)">Open…</button>
+<input type="file" id="mFile" accept="application/pdf,.pdf" hidden>
+<i></i>
+<button data-a="first" title="First page">«</button><button data-a="prev" title="Previous page">‹</button>
+<input id="mPgN" type="number" min="1" value="1" title="Page number; Enter to go">
+<span id="mPgT" title="Pages in this PDF">–</span>
+<button data-a="next" title="Next page">›</button><button data-a="last" title="Last page">»</button>
+<i></i>
+<button data-a="out" title="Zoom out (−)">−</button><span id="mZoomB" title="Zoom level">100%</span><button data-a="in" title="Zoom in (+)">＋</button>
+<button data-a="fit" title="Fit the page width to the window (0)">Fit</button>
+<i></i><button data-a="help" title="Shortcuts (?)">Help</button>
+</div>
+<div id="mMain">
+<div id="mLeft"><div id="mThumb"></div><div id="mViewWrap"><div id="mView"></div>
+<div id="mHint"><div><b>Drop a PDF here</b>, or choose Open… above<br><small>Text pasted into the panel on the right translates without a PDF.</small></div></div>
+</div></div>
+<div id="mSplit" title="Drag to resize the panes"></div>
+<div id="mRight">
+<details id="mCfg"><summary title="Your key stays in this browser">AI settings</summary>
+<label>Provider<select id="mProv" title="AI provider"><option value="Glm">GLM</option><option value="Ds">DeepSeek</option></select></label>
+<label>Model<select id="mModel" title="Model"></select></label>
+<label>Think<select id="mThink" title="Reasoning effort: how hard the model thinks before answering"><option value="low">Low</option><option value="high">High</option><option value="max">Max</option></select></label>
+<label>Key<input id="mKey" type="password" autocomplete="off" placeholder="API key" spellcheck="false"></label>
+<label>URL<input id="mEp" spellcheck="false"></label>
+</details>
+<details><summary>Language</summary>
+<label>Into<select id="mLang"></select></label>
+<label class="up" hidden>Prompt<small>{lang} is replaced by the target language</small><textarea id="mPrompt" rows="4" spellcheck="false"></textarea></label>
+</details>
+<textarea id="mSrc" spellcheck="false" placeholder="Select text in the PDF, or paste it here — ⌘/Ctrl+Enter translates"></textarea>
+<div id="mOps">
+<label title="Translate as soon as text is selected in the PDF"><input type="checkbox" id="mAuto">Auto</label>
+<button id="mGo" title="⌘/Ctrl+Enter">Translate</button>
+<button id="mClr" title="Remove all translations">Clear</button>
+<span id="mCnt"></span>
+</div>
+<div id="mBody">
+<div id="mHist"></div>
+</div>
+</div>
+</div>
+<div id="mSt"><span id="mMsg"></span><span id="mSel"></span><button data-a="theme">Theme</button></div>
+<dialog id="mHelp"><form method="dialog"><h3>Shortcuts</h3><dl>
+<dt><kbd>?</kbd></dt><dd>This help</dd>
+<dt><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd></dt><dd>Translate</dd>
+<dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Step pages (<kbd>Home</kbd>/<kbd>End</kbd>: first/last)</dd>
+<dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Space</kbd></dt><dd>Scroll</dd>
+<dt><kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd></dt><dd>Zoom (<kbd>Ctrl</kbd>+wheel too)</dd>
+</dl><p class="ft"><button value="">Close</button></p></form></dialog>
+<script>
+'use strict';
+const $=i=>document.getElementById(i),V=$('mView'),ls=(k,v)=>{try{return v==null?localStorage[k]:localStorage[k]=v}catch(_){}};
+const el=(t,c,x)=>{const e=document.createElement(t);c&&(e.className=c);x!=null&&(e.textContent=x);return e},
+  btn=(t,ti)=>{const e=el('button',0,t);ti&&(e.title=ti);return e},msg=t=>$('mMsg').textContent=t||'';
+const nl=n=>n.toLocaleString('en');
+
+// ---------- AI settings (GLM / DeepSeek) ----------
+const AI={Glm:['https://open.bigmodel.cn/api/paas/v4/chat/completions','glm-5.3','glm-5.3-flash'],Ds:['https://api.deepseek.com/chat/completions','deepseek-flash','deepseek-v4-pro']},
+  aiF=[['mKey','Key'],['mModel','Model'],['mEp','Ep']],
+  aiLoad=()=>{const p=$('mProv').value,[u,...ms]=AI[p],m=ls('mrd'+p+'Model');
+    $('mModel').replaceChildren(...ms.map(x=>new Option(x,x)));
+    $('mModel').value=ms.includes(m)?m:ms[0];
+    $('mKey').value=ls('mrd'+p+'Key')||'';$('mEp').value=ls('mrd'+p+'Ep')||u};
+for(const[i,k]of[['mProv','mrdAi'],['mThink','mrdThink']]){const e=$(i),v=ls(k);v&&[...e.options].some(o=>o.value===v)&&(e.value=v);e.onchange=()=>{ls(k,e.value);i==='mProv'&&aiLoad()}}
+for(const[i,k]of aiF)$(i).onchange=()=>ls('mrd'+$('mProv').value+k,$(i).value.trim());
+aiLoad();$('mCfg').open=!$('mKey').value;
+
+// ---------- language, prompt ----------
+const LANGS=['Simplified Chinese','English'],
+  PROMPT0='Translate the academic text given by the user into {lang}. Output only the translation, with accurate terminology and fluent prose. Keep gene names, Latin species names, abbreviations, formulas and literature citation marks unchanged.';
+$('mLang').replaceChildren(...LANGS.map(l=>new Option(l,l)));
+$('mLang').value=LANGS.includes(ls('mrdLang'))?ls('mrdLang'):LANGS[0];
+$('mAuto').checked=ls('mrdAuto')!=='0';
+$('mPrompt').value=ls('mrdPrompt')||PROMPT0;
+$('mLang').onchange=()=>ls('mrdLang',$('mLang').value);
+$('mPrompt').onchange=()=>ls('mrdPrompt',$('mPrompt').value);
+$('mAuto').onchange=()=>ls('mrdAuto',$('mAuto').checked?'1':'0');
+
+// ---------- translate ----------
+const cnt=()=>$('mCnt').textContent=nl($('mSrc').value.length)+' chars';
+let ac;
+async function translate(go){
+  if(ac){ac.abort();if(!go)return}
+  const text=$('mSrc').value.trim(),key=$('mKey').value.trim();
+  if(!text)return msg('Select text in the PDF, or paste it into the box');
+  if(!key){$('mCfg').open=true;return msg('Enter an API key first (AI settings)')}
+  const t0=performance.now(),srcN=text.length,model=$('mModel').value,
+    it=el('div','item'),hd=el('div','hd'),st=el('span','st','0.0 s'),
+    cp=btn('Copy','Copy the translation'),rm=btn('×','Remove'),
+    od=el('details','o'),os=el('summary'),out=el('div','t');
+  hd.append(el('span','mt',model),el('span','tm',new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})),st,cp,rm);
+  os.textContent=(srcN>72?text.slice(0,72)+'…':text)+' · '+nl(srcN)+' chars';
+  od.append(os,el('div','ob',text));it.append(hd,od,out);cp.disabled=true;
+  rm.onclick=()=>it.remove();
+  cp.onclick=()=>navigator.clipboard.writeText(out.textContent).then(()=>{msg('Translation copied');cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1200)},()=>msg('Copy failed — the browser blocked clipboard access'));
+  const stick=$('mHist').scrollTop<30;
+  $('mHist').prepend(it);stick&&($('mHist').scrollTop=0);
+  let th=null,tb=null,tsm=null,thc=0,acc='',shut=0;
+  const stats=()=>{cp.disabled=!acc;st.textContent=((performance.now()-t0)/1e3).toFixed(1)+' s · '+nl(srcN)+'→'+nl(acc.length)};
+  const myAc=new AbortController(),ok=()=>ac===myAc;
+  ac=myAc;$('mGo').textContent='Stop';msg('Translating with '+model+'…');
+  try{
+    const r=await fetch($('mEp').value.trim(),{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},signal:myAc.signal,
+      body:JSON.stringify({model,messages:[{role:'system',content:$('mPrompt').value.replaceAll('{lang}',$('mLang').value)},{role:'user',content:text}],stream:true,max_tokens:32768,thinking:{type:'enabled'},reasoning_effort:$('mThink').value})});
+    if(!r.ok)throw Error(r.status+' '+(await r.text()).slice(0,300));
+    const rd=r.body.pipeThrough(new TextDecoderStream()).getReader();let buf='';
+    for(;;){const{value,done}=await rd.read();if(done)break;const ls2=(buf+=value).split('\n');buf=ls2.pop();
+      for(const l of ls2){const d=l.startsWith('data:')&&l.slice(5).trim();if(!d||d==='[DONE]')continue;let j;try{j=JSON.parse(d)}catch{continue}
+        if(j.error)throw Error(j.error.message||JSON.stringify(j.error));
+        const c=j.choices?.[0]?.delta||{};
+        if(c.reasoning_content){if(!th){tsm=el('summary');tb=el('div','tb');th=el('details','th');th.append(tsm,tb);th.open=true;od.after(th)}
+          tb.append(c.reasoning_content);thc+=c.reasoning_content.length;tsm.textContent='Thinking… '+nl(thc)+' chars'}
+        if(c.content){acc+=c.content;out.textContent=acc;stats();th&&!shut&&(shut=1,th.open=false)}}}
+    if(!acc&&!thc)throw Error('Empty reply');
+    ok()&&msg('Translated');
+  }catch(e){
+    if(e.name==='AbortError'){if(!acc){out.classList.add('dim');out.textContent='Stopped'}ok()&&msg('Stopped')}
+    else{acc||(out.style.display='none');it.append(el('div','t err','✖ '+e.message+(e instanceof TypeError?' (network, URL or CORS problem)':'')));ok()&&msg('Translation failed')}
+  }finally{ok()&&(ac=null,$('mGo').textContent='Translate');stats();tsm&&(tsm.textContent='Thought for '+nl(thc)+' chars')}
+}
+$('mGo').onclick=()=>translate();
+$('mClr').onclick=()=>{ac?.abort();$('mHist').replaceChildren();msg('History cleared')};
+$('mSrc').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();translate(1)}});
+$('mSrc').addEventListener('input',cnt);cnt();
+
+// ---------- PDF ----------
+window.pdfjsLib&&(pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+let pdf=null,scale=1,gen=0,obs,layP=Promise.resolve();
+const open=f=>f.arrayBuffer().then(b=>openPdf(b,f.name)).catch(e=>msg('Cannot read '+f.name+': '+e.message));
+async function openPdf(buf,name){
+  if(!window.pdfjsLib)return msg('PDF engine failed to load — check the connection to cdnjs');
+  try{const np=await pdfjsLib.getDocument({data:buf}).promise;pdf&&pdf.destroy().catch(()=>{});pdf=np}
+  catch(e){return msg('Cannot open '+name+': '+e.message)}
+  $('mHint').hidden=true;$('mPgT').textContent=pdf.numPages;$('mPgN').value=1;$('mPgN').max=pdf.numPages;
+  document.title='miniread — '+name;msg(name+' · '+pdf.numPages+' pages');V.scrollTop=0;fit();TH()&&buildThumbs().catch(()=>{});
+}
+function layout(){
+  const g=++gen,doc=pdf;obs?.disconnect();V.replaceChildren();$('mZoomB').textContent=Math.round(scale*100)+'%';
+  obs=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&draw(e.target)),{root:V,rootMargin:'800px 0px'});
+  return layP=(async()=>{for(let i=1;i<=doc.numPages;i++){
+    const vp=(await doc.getPage(i)).getViewport({scale});if(g!==gen)return;
+    const d=el('div','page');d.dataset.n=i;d.style.cssText=`width:${vp.width}px;height:${vp.height}px;--scale-factor:${scale}`;
+    V.append(d);obs.observe(d)}})().catch(()=>{})
+}
+async function draw(d){
+  obs.unobserve(d);
+  try{
+    const page=await pdf.getPage(+d.dataset.n),vp=page.getViewport({scale}),r=devicePixelRatio||1,c=el('canvas'),t=el('div','textLayer');
+    c.width=vp.width*r;c.height=vp.height*r;d.append(c,t);
+    await page.render({canvasContext:c.getContext('2d'),viewport:vp,transform:[r,0,0,r,0,0]}).promise;
+    await pdfjsLib.renderTextLayer({textContentSource:page.streamTextContent(),container:t,viewport:vp,textDivs:[]}).promise;
+    t.append(el('div','endOfContent'));
+  }catch(e){d.isConnected&&msg('Page '+(+d.dataset.n)+' did not render: '+(e.message||e))}
+}
+function zoom(f){if(!pdf)return msg('Open a PDF first');
+  const ns=Math.min(8,Math.max(.1,scale*f));if(ns===scale)return;
+  const y=V.scrollTop/Math.max(1,V.scrollHeight);scale=ns;
+  layout().then(()=>V.scrollTop=y*V.scrollHeight)}
+function fit(){if(!pdf)return msg('Open a PDF first');
+  pdf.getPage(1).then(p=>{const s=(V.clientWidth-34)/p.getViewport({scale:1}).width;zoom(s/scale)}).catch(()=>{})}
+function cur(){let n=0;
+  for(const p of V.querySelectorAll('.page')){if(p.offsetTop-V.scrollTop<=V.clientHeight*.4)n=+p.dataset.n;else break}
+  n&&n!==curN&&(curN=n,$('mPgN').value=n,mark())}
+V.addEventListener('scroll',()=>requestAnimationFrame(cur),{passive:true});
+function goto(n){if(!pdf)return msg('Open a PDF first');
+  n=Math.min(Math.max(1,n||1),pdf.numPages);
+  const p=V.querySelector(`.page[data-n="${n}"]`);
+  if(p)V.scrollTop=p.offsetTop-8;else layP.then(()=>V.querySelector(`.page[data-n="${n}"]`)?.scrollIntoView());
+  $('mPgN').value=n;n!==curN&&(curN=n,mark())}
+$('mPgN').onchange=()=>goto(+$('mPgN').value);
+
+// ---------- thumbnails ----------
+let ts=1,tobs=null,tgen=0,curN=0;
+const TH=()=>document.body.classList.contains('thumbs'),qa=a=>document.querySelector(`[data-a=${a}]`);
+function setTh(on){document.body.classList.toggle('thumbs',on);ls('mrdThumbs',on?'1':'0');
+  qa('thumbs').classList.toggle('on',on);on&&pdf&&buildThumbs().catch(()=>{})}
+async function buildThumbs(){
+  if(!pdf||!TH())return;const g=++tgen;tobs?.disconnect();const T=$('mThumb');T.replaceChildren();curN=0;
+  ts=96/(await pdf.getPage(1)).getViewport({scale:1}).width;
+  tobs=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&tdraw(e.target)),{root:T,rootMargin:'300px 0px'});
+  for(let i=1;i<=pdf.numPages;i++){
+    const vp=(await pdf.getPage(i)).getViewport({scale:ts});if(g!==tgen)return;
+    const d=el('div','tp');d.dataset.n=i;
+    const ph=el('div','ph');ph.style.height=Math.round(vp.height)+'px';
+    d.append(ph,el('b',0,i));T.append(d);tobs.observe(d)}
+  g===tgen&&(curN=+$('mPgN').value||1,mark())}
+async function tdraw(d){
+  tobs.unobserve(d);
+  try{const ph=d.firstChild,n=+d.dataset.n,p=await pdf.getPage(n),vp=p.getViewport({scale:ts}),
+    r=Math.min(2,devicePixelRatio||1),c=el('canvas');
+  c.width=vp.width*r;c.height=vp.height*r;
+  await p.render({canvasContext:c.getContext('2d'),viewport:vp,transform:[r,0,0,r,0,0]}).promise;
+  ph.replaceWith(c)}catch(_){}}
+function mark(){const T=$('mThumb'),t=T.querySelector(`.tp[data-n="${curN}"]`);
+  t&&(T.querySelectorAll('.tp.cur').forEach(x=>x.classList.remove('cur')),t.classList.add('cur'),t.scrollIntoView({block:'nearest'}))}
+$('mThumb').onclick=e=>{const t=e.target.closest('.tp');t&&goto(+t.dataset.n)};
+setTh(ls('mrdThumbs')!=='0');
+
+// ---------- selection ----------
+let lastSel='';
+V.addEventListener('mousedown',e=>e.target.closest('.textLayer')?.classList.add('selecting'));
+document.addEventListener('mouseup',()=>{
+  document.querySelectorAll('.textLayer.selecting').forEach(t=>t.classList.remove('selecting'));
+  const s=getSelection();if(!s.rangeCount||!V.contains(s.anchorNode))return;
+  const txt=s.toString().replace(/([A-Za-z])-\s*\n\s*(?=[a-z])/g,'$1').replace(/\s+/g,' ').trim();if(!txt)return;
+  const w=(txt.match(/[A-Za-z0-9'’-]+|[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/g)||[]).length;
+  $('mSel').textContent='Selected '+nl(txt.length)+' chars · '+nl(w)+' words';
+  if(txt!==lastSel||txt!==$('mSrc').value){lastSel=txt;$('mSrc').value=txt;cnt();$('mAuto').checked&&translate(1)}
+});
+
+// ---------- files, keys, actions ----------
+$('mFile').onchange=e=>{const f=e.target.files[0];f&&open(f);e.target.value=''};
+document.addEventListener('dragover',e=>[...e.dataTransfer?.types||[]].includes('Files')&&e.preventDefault());
+document.addEventListener('drop',e=>{const f=e.dataTransfer?.files?.[0];if(!f)return;e.preventDefault();
+  f.type==='application/pdf'||/\.pdf$/i.test(f.name)?open(f):msg('Not a PDF: '+f.name)});
+let wzT=0;
+V.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();clearTimeout(wzT);
+  wzT=setTimeout(()=>zoom(e.deltaY<0?1.2:1/1.2),60)}},{passive:false});
+document.addEventListener('keydown',e=>{
+  if(e.target.closest('input,textarea,select,button,a,[contenteditable]'))return;
+  const k=e.key;
+  if(k==='?')$('mHelp').showModal();
+  else if(k==='+'||k==='=')zoom(1.2);else if(k==='-')zoom(1/1.2);else if(k==='0')fit();
+  else if(k==='ArrowLeft')goto(+$('mPgN').value-1);else if(k==='ArrowRight')goto(+$('mPgN').value+1);
+  else if(k==='Home')goto(1);else if(k==='End')goto(pdf?.numPages||1);
+  else{let d=0;
+    if(k==='ArrowDown')d=.2;else if(k==='ArrowUp')d=-.2;
+    else if(k==='PageDown'||(k===' '&&!e.shiftKey))d=.9;else if(k==='PageUp'||(k===' '&&e.shiftKey))d=-.9;
+    d&&(e.preventDefault(),V.scrollBy(0,d*V.clientHeight))}});
+const A={open:()=>$('mFile').click(),thumbs:()=>setTh(!TH()),first:()=>goto(1),prev:()=>goto(+$('mPgN').value-1),next:()=>goto(+$('mPgN').value+1),
+  last:()=>goto(pdf?.numPages||1),out:()=>zoom(1/1.2),'in':()=>zoom(1.2),fit,help:()=>$('mHelp').showModal(),
+  theme:()=>{const d=document.documentElement.dataset.theme!=='dark';setTheme(d);ls('mrdTheme',d?'dark':'light')}};
+function setTheme(d){document.documentElement.dataset.theme=d?'dark':'light';const b=qa('theme');
+  b.textContent='Theme: '+(d?'Dark':'Light');b.title=d?'Switch to light interface':'Switch to dark interface'}
+setTheme(document.documentElement.dataset.theme==='dark');
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>A[b.dataset.a]());
+const sp=$('mSplit');
+sp.onpointerdown=e=>{e.preventDefault();sp.setPointerCapture(e.pointerId);
+  sp.onpointermove=m=>$('mLeft').style.flexBasis=m.clientX+'px'};
+sp.onpointerup=sp.onlostpointercapture=()=>sp.onpointermove=null;
+</script>
+</body>
+</html>
