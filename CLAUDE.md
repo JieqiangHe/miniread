@@ -16,7 +16,7 @@ A single-file PDF reader with side-by-side AI translation (GLM / DeepSeek with y
 
 - `miniread.plugin` is built by the `jh-html-to-tbtools-plugin` skill in this repo: stage a copy of `index.html` plus `tbtools-ai.json` (`{"capabilities":["chat"]}` — opts the page into the TBtools model bridge), download pdf.js `pdf.min.js` + `pdf.worker.min.js` into `vendor/`, point the script tag and `workerSrc` at relative paths, and load the worker as a classic script too — its `pdfjsWorker` global makes pdf.js 3.11 use the main-thread fake worker, the only mode that works under file://. The repo `index.html` keeps the cdnjs links.
 - Rebuild after changing `index.html`. javac lives in the micromamba `openjdk_25.0.2` env (`.../envs/openjdk_25.0.2/lib/jvm/bin` — conda-forge puts the JDK under `lib/jvm`); the TBtools main jar is `~/.TBtools/TBtools_JRE1.6.jar`. Verify with the skill's `Verify.java` (expect `OK: reached WebGuiJPanel`).
-- TBtools caveats: the plugin's localStorage sits in TBtools' shared `.jxbrowser` dir — every file:// plugin page can read the stored API keys; dragging PDFs in from Finder is unverified in OFF_SCREEN mode (Open button is the reliable path).
+- TBtools caveats: the plugin's localStorage sits in TBtools' shared `.jxbrowser` dir — every file:// plugin page can read the stored API keys; Open… shows a native dialog via the plugin's `OpenFileCallback` hook (nothing handles file choosers in OFF_SCREEN mode otherwise); dragging PDFs in from Finder is unverified in OFF_SCREEN mode.
 
 ## Architecture (names in index.html)
 

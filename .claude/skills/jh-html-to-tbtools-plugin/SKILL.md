@@ -5,7 +5,7 @@ description: Package an HTML / static web tool as an installable TBtools plugin 
 
 # HTML → TBtools plugin
 
-The Java side is a thin shell: it opens the plugin folder's `index.html` via file:// using TBtools' own JxBrowser panel, and replaces two of that browser's callbacks so downloads open a Save dialog and `window.print()` saves a PDF. Bundled scripts:
+The Java side is a thin shell: it opens the plugin folder's `index.html` via file:// using TBtools' own JxBrowser panel, and hooks several of that browser's callbacks so `<input type=file>` opens an Open dialog, downloads open a Save dialog, and `window.print()` saves a PDF. Bundled scripts:
 
 - `scripts/PluginInject.java`: generic entry class; the plugin name is taken from the plugin folder name — no per-app modification needed. It reaches JxBrowser only by reflection (see Save dialogs and PDF below).
 - `scripts/build.sh`: compiles and packages everything into a `.plugin`.
@@ -97,12 +97,13 @@ The `.plugin` is installed through Install Plugin in the TBtools menu. On delive
 
 ## Save dialogs and PDF (how PluginInject hooks the browser)
 
-- TBtools' own download callback saves to the system temp directory, shows "Download Finished. Browse It?", and offers to install any `.zip`/`plugin` file as a plugin. JxBrowser 7 cancels every print request unless a `PrintCallback` is set.
+- TBtools' own download callback saves to the system temp directory, shows "Download Finished. Browse It?", and offers to install any `.zip`/`plugin` file as a plugin. JxBrowser 7 cancels every print request unless a `PrintCallback` is set. In OFF_SCREEN mode nothing handles file choosers unless an `OpenFileCallback` is set, so a page's `<input type=file>` appears dead (reported in TBtools-II on macOS, Oct 2026; JxBrowser 7.22).
 - After building `WebGuiJPanel`, PluginInject looks for its `com.teamdev.jxbrowser.browser.Browser`:
   - first via `getBrowser()` on any component in the panel's tree (the Swing `BrowserView`);
   - then in a Browser-typed field of `WebGuiJPanel`;
   - if neither is there yet, again each time the panel is shown.
 - It then calls `browser.set(...)` with `java.lang.reflect.Proxy` callbacks; every JxBrowser method is looked up by name at run time, so nothing is compiled against JxBrowser:
+  - `OpenFileCallback` (`<input type=file>`): an AWT `FileDialog` in LOAD mode, opened in the last folder used (shared with downloads); Open → `tell.open(path)`, Cancel → `tell.cancel()`. Only the single-file callback is hooked; a `multiple` input (`OpenFilesCallback`) is left to TBtools.
   - `StartDownloadCallback`: an AWT `FileDialog` (native on macOS and Windows, GTK on Linux) prefilled with `download().target().suggestedFileName()`, opened in the last folder used; Save → `tell.download(path)`, Cancel → `tell.cancel()`.
   - `PrintCallback`: `tell.print()` (no preview). `PrintHtmlCallback`: a `FileDialog` for a `.pdf`, then `printers().pdfPrinter()` → `printJob().settings()` → `pdfFilePath(path)`, `enablePrintingBackgrounds()`, `disablePrintingHeaderFooter()`, `apply()` → `tell.proceed(pdfPrinter)`.
   - The PDF name comes from the page title: a leading `•`/`*` is dropped, the title is cut at ` — `, ` - ` or ` | `, and a file extension is removed (`• fig.svg — minisvg` → `fig.pdf`; empty → `page.pdf`).
