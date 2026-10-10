@@ -150,20 +150,16 @@ const el=(t,c,x)=>{const e=document.createElement(t);c&&(e.className=c);x!=null&
   btn=(t,ti)=>{const e=el('button',0,t);ti&&(e.title=ti);return e},msg=t=>$('mMsg').textContent=t||'';
 const nl=n=>n.toLocaleString('en');
 
-// ---------- AI settings (GLM / DeepSeek / TBtools) ----------
+// ---------- AI settings (GLM / DeepSeek) ----------
 const AI={Glm:['https://open.bigmodel.cn/api/paas/v4/chat/completions','glm-5.3','glm-5.3-flash'],Ds:['https://api.deepseek.com/chat/completions','deepseek-flash','deepseek-v4-pro']},
-  tbAi=()=>window.tbtools?.ai,
   aiF=[['mKey','Key'],['mModel','Model'],['mEp','Ep']],
-  aiLoad=()=>{const p=$('mProv').value,on=p==='Tb';
-    for(const i of['mModel','mThink','mKey','mEp'])$(i).parentElement.hidden=on;
-    if(on)return;const[u,...ms]=AI[p],m=ls('mrd'+p+'Model');
+  aiLoad=()=>{const p=$('mProv').value,[u,...ms]=AI[p],m=ls('mrd'+p+'Model');
     $('mModel').replaceChildren(...ms.map(x=>new Option(x,x)));
     $('mModel').value=ms.includes(m)?m:ms[0];
     $('mKey').value=ls('mrd'+p+'Key')||'';$('mEp').value=ls('mrd'+p+'Ep')||u};
 for(const[i,k]of[['mProv','mrdAi'],['mThink','mrdThink']]){const e=$(i),v=ls(k);v&&[...e.options].some(o=>o.value===v)&&(e.value=v);e.onchange=()=>{ls(k,e.value);i==='mProv'&&aiLoad()}}
 for(const[i,k]of aiF)$(i).onchange=()=>ls('mrd'+$('mProv').value+k,$(i).value.trim());
-tbAi()&&($('mProv').add(new Option('TBtools','Tb'),0),$('mProv').value='Tb');
-aiLoad();$('mCfg').open=$('mProv').value!=='Tb'&&!$('mKey').value;
+aiLoad();$('mCfg').open=!$('mKey').value;
 
 // ---------- language, prompt ----------
 const LANGS=['Simplified Chinese','English'],
@@ -179,15 +175,12 @@ $('mAuto').onchange=()=>ls('mrdAuto',$('mAuto').checked?'1':'0');
 // ---------- translate ----------
 const cnt=()=>$('mCnt').textContent=nl($('mSrc').value.length)+' chars';
 let ac;
-const tbWhy={denied:'TBtools declined this request.',busy:'TBtools is busy. Try again in a moment.',closed:'The TBtools model bridge is closed.',invalid:'TBtools could not read this request.',too_many:'This conversation is too long for TBtools.',too_large:'This message is too large for TBtools.'};
 async function translate(go){
   if(ac){ac.abort();if(!go)return}
-  const text=$('mSrc').value.trim(),br=$('mProv').value==='Tb'&&tbAi(),key=$('mKey').value.trim();
+  const text=$('mSrc').value.trim(),key=$('mKey').value.trim();
   if(!text)return msg('Select text in the PDF, or paste it into the box');
-  if(!br&&!key){$('mCfg').open=true;return msg('Enter an API key first (AI settings)')}
-  const sys=$('mPrompt').value.replaceAll('{lang}',$('mLang').value);
-  if(br&&sys.length+text.length>32e3)return msg('The text is too large for TBtools (32,000 characters) — switch provider or shorten it');
-  const t0=performance.now(),srcN=text.length,model=br?'TBtools':$('mModel').value,
+  if(!key){$('mCfg').open=true;return msg('Enter an API key first (AI settings)')}
+  const t0=performance.now(),srcN=text.length,model=$('mModel').value,
     it=el('div','item'),hd=el('div','hd'),st=el('span','st','0.0 s'),
     cp=btn('Copy','Copy the translation'),rm=btn('×','Remove'),
     od=el('details','o'),os=el('summary'),out=el('div','t');
@@ -198,16 +191,13 @@ async function translate(go){
   cp.onclick=()=>navigator.clipboard.writeText(out.textContent).then(()=>{msg('Translation copied');cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1200)},()=>msg('Copy failed — the browser blocked clipboard access'));
   const stick=$('mHist').scrollTop<30;
   $('mHist').prepend(it);stick&&($('mHist').scrollTop=0);
-  let th=null,tb=null,tsm=null,thc=0,acc='',shut=0,rid='';
+  let th=null,tb=null,tsm=null,thc=0,acc='',shut=0;
   const stats=()=>{cp.disabled=!acc;st.textContent=((performance.now()-t0)/1e3).toFixed(1)+' s · '+nl(srcN)+'→'+nl(acc.length)};
-  const myAc=br?{abort:()=>rid&&br.abort(rid)}:new AbortController(),ok=()=>ac===myAc;
+  const myAc=new AbortController(),ok=()=>ac===myAc;
   ac=myAc;$('mGo').textContent='Stop';msg('Translating with '+model+'…');
   try{
-    if(br){const p=br.chat([{role:'system',content:sys},{role:'user',content:text}],{onDelta:s=>{acc=s||'';out.textContent=acc;stats()}});
-      rid=p.requestId;acc=await p||'';stats()}
-    else{
     const r=await fetch($('mEp').value.trim(),{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},signal:myAc.signal,
-      body:JSON.stringify({model,messages:[{role:'system',content:sys},{role:'user',content:text}],stream:true,max_tokens:32768,thinking:{type:'enabled'},reasoning_effort:$('mThink').value})});
+      body:JSON.stringify({model,messages:[{role:'system',content:$('mPrompt').value.replaceAll('{lang}',$('mLang').value)},{role:'user',content:text}],stream:true,max_tokens:32768,thinking:{type:'enabled'},reasoning_effort:$('mThink').value})});
     if(!r.ok)throw Error(r.status+' '+(await r.text()).slice(0,300));
     const rd=r.body.pipeThrough(new TextDecoderStream()).getReader();let buf='';
     for(;;){const{value,done}=await rd.read();if(done)break;const ls2=(buf+=value).split('\n');buf=ls2.pop();
@@ -217,12 +207,11 @@ async function translate(go){
         if(c.reasoning_content){if(!th){tsm=el('summary');tb=el('div','tb');th=el('details','th');th.append(tsm,tb);th.open=true;od.after(th)}
           tb.append(c.reasoning_content);thc+=c.reasoning_content.length;tsm.textContent='Thinking… '+nl(thc)+' chars'}
         if(c.content){acc+=c.content;out.textContent=acc;stats();th&&!shut&&(shut=1,th.open=false)}}}
-    }
     if(!acc&&!thc)throw Error('Empty reply');
     ok()&&msg('Translated');
   }catch(e){
-    if(e.name==='AbortError'||br&&e.message==='aborted'){if(!acc){out.classList.add('dim');out.textContent='Stopped'}ok()&&msg('Stopped')}
-    else{acc||(out.style.display='none');it.append(el('div','t err','✖ '+(br?tbWhy[e.message]||e.message:e.message)+(e instanceof TypeError?' (network, URL or CORS problem)':'')));ok()&&msg('Translation failed')}
+    if(e.name==='AbortError'){if(!acc){out.classList.add('dim');out.textContent='Stopped'}ok()&&msg('Stopped')}
+    else{acc||(out.style.display='none');it.append(el('div','t err','✖ '+e.message+(e instanceof TypeError?' (network, URL or CORS problem)':'')));ok()&&msg('Translation failed')}
   }finally{ok()&&(ac=null,$('mGo').textContent='Translate');stats();tsm&&(tsm.textContent='Thought for '+nl(thc)+' chars')}
 }
 $('mGo').onclick=()=>translate();
